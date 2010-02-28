@@ -1,0 +1,29 @@
+A "sequence point" is a gap between things that happen in a program. The empty
+program has one sequence point. This program has two:
+ 
+  my $a = 42;
+ 
+(One before the assignment, and one after.)
+ 
+This program has three:
+ 
+  my $a = $a++;
+ 
+(One before everything; one after the postfix:<++> changes the value of $a to
+1; one after the assignment sets the value of $a back to Any.)
+ 
+Things with 'side effects' generally introduces one or more sequence points. If
+something can affect a storage location somewhere (like the '++' above, it
+deserves a sequence point.)
+ 
+A "tick" is a moment of execution in a program. Generally, ticks follow
+sequence points, but may branch off or come back by different mechanisms, such
+as if statements, trinary operators, sub calls, loops, recursion, etc.
+ 
+When the debugger is run, it sits collecting all possible states from all the
+ticks, and then upon completion spits out "Done. 49367 ticks."
+ 
+The user can then browse through ticks 0..49366 in various intelligent ways.
+Either just go to a particular point in the execution, or ask more specific
+questions, such as "When and where was this variable last set?" or "How many
+times has this sequence point been executed?"
