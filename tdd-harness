@@ -1,0 +1,90 @@
+use v5.8;
+use strict;
+use warnings;
+
+my $loud = 1;
+my $TEST_FILE = shift or die 'Usage: tdd-harness <testfile>';
+my $SLEEP_TIME = 2;
+
+$ENV{PERL6LIB} = './lib';
+
+my @files = qw<
+    lib/Tardis.pm
+    t/examples.t
+>;
+my %modifications = map { $_ => -M $_ } @files;
+my $checkpoint_time = time();
+
+my %mode_messages = ('implementation' => 'back to coding',
+                     'build'          => 'compiling',
+                     'control'        => 'testing',
+                     'checkpoint'     => 'checkpoint, oh yay!');
+
+sub set_mode {
+    my ($mode) = @_;
+
+    print '=== ', uc $mode, " MODE\n";
+    $loud and system("say " . $mode_messages{$mode});
+}
+
+sub check_passes {
+    my ($file) = @_;
+
+    `perl -ne'print /^ok/ || /# TODO/ ? 1 : /^not ok/ ? 0 : ""' $file`;
+}
+
+sub compare_passes {
+    my ($new, $old) = @_;
+
+    my ($passing_new_tests, $passing_old_tests)
+        = map { /^(1*)/ and length $1 } $new, $old;
+
+    return $passing_new_tests <=> $passing_old_tests;
+}
+
+sub run_tests {
+    system( "alpha $TEST_FILE | tee test.log" );
+    my $results = check_passes('test.log');
+    unlink('test.log');
+    return $results;
+}
+
+set_mode 'control';
+my $last_passes = run_tests();
+
+while (1) {
+    set_mode 'implementation';
+
+    WAIT:
+    while (1) {
+        sleep $SLEEP_TIME;
+        for my $file (keys %modifications) {
+            if ($modifications{$file} > -M $file) {
+                $modifications{$file} = -M $file;
+                set_mode 'build';
+                my $build_successful = !system("make");
+                last WAIT unless $build_successful;
+                set_mode 'control';
+                my $these_passes = run_tests();
+                my $cmp = compare_passes($these_passes, $last_passes);
+                if ($cmp < 0) {
+                    print "++ Regression\n";
+                }
+                elsif ($cmp == 0) {
+                    print "++ Nope, that wasn't it\n";
+                }
+                else {
+                    set_mode 'checkpoint';
+                    my $t = time() - $checkpoint_time;
+                    printf "Elapsed time: %d s (%d m %d s)\n",
+                           $t, $t/60, $t % 60;
+                    $checkpoint_time = time();
+                    sleep 4;
+                    system('git ci ' . join ' ', @files);
+                    $last_passes = $these_passes;
+                }
+                last WAIT;
+            }
+        }
+    }
+}
