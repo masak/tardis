@@ -3,7 +3,7 @@ use Test;
 
 use Tardis;
 
-my Tardis::Debugger $debugger .= new(program => []);
+my Tardis::Debugger $debugger .= new(program => ());
 $debugger.run;
 
 is +$debugger.ticks, 1, 'empty program has 1 tick';
