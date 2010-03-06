@@ -26,6 +26,6 @@ class Tardis::Debugger {
     }
 
     method ticks() {
-        ()
+        my @ticks = Tardis::Tick.new();     # empty starting state
     }
 }
