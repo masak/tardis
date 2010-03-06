@@ -22,10 +22,13 @@ class Tardis::Tick {
 }
 
 class Tardis::Debugger {
-    method run() {
-    }
+    has @!program;
+    has Tardis::Tick @.ticks;
 
-    method ticks() {
-        my @ticks = Tardis::Tick.new();     # empty starting state
+    method run() {
+        @!ticks.push( Tardis::Tick.new() );     # empty starting state
+        for @!program -> $statement {
+            @!ticks.push( Tardis::Tick.new() ); # state after statement
+        }
     }
 }
