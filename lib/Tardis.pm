@@ -1,5 +1,6 @@
 use v6;
 
+class AST::Node::Declaration {}
 class AST::Node::Assignment {}
 class AST::Node::Variable {}
 class AST::Node::Literal {}

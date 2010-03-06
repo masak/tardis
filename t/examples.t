@@ -9,7 +9,10 @@ $debugger.run;
 is +$debugger.ticks, 1, 'empty program has 1 tick';
 
 $debugger .= new(program => [AST::Node::Assignment.new(
-    AST::Node::Variable.new('$a'),
+    AST::Node::Declaration.new(
+        'my',
+        AST::Node::Variable.new('$a')
+    ),
     AST::Node::Literal.new(42)
 )]);
 $debugger.run;
@@ -27,7 +30,10 @@ is +$debugger.ticks, 2, 'single-assignment program has 2 ticks';
 }
 
 $debugger .= new(program => [AST::Node::Assignment.new(
-    AST::Node::Variable.new('$a'),
+    AST::Node::Declaration.new(
+        'my',
+        AST::Node::Variable.new('$a')
+    ),
     AST::Node::Op.new(
         'postfix:<++>',
         AST::Node::Variable.new('$a')))
