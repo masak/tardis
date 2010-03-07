@@ -29,9 +29,9 @@ is +$debugger.ticks, 2, 'single-assignment program has 2 ticks';
     my @ticks = $debugger.ticks;
     is +@ticks[0].pad.variables, 1,
        'there is one variable in the current pad';
-    is @ticks[0].pad.variable('$a'), 'Any',
+    is @ticks[0].pad.variables<$a>, 'Any',
        'before assignment, var is undefined';
-    is @ticks[1].pad.variable('$a'), '42',
+    is @ticks[1].pad.variables<$a>, '42',
        'after assignment, var is 42';
 }
 
@@ -55,10 +55,10 @@ is +$debugger.ticks, 3, 'assignment with ++ has 3 ticks';
 
 {
     my @ticks = $debugger.ticks;
-    is @ticks[0].pad.variable('$a'), 'Any',
+    is @ticks[0].pad.variables<$a>, 'Any',
        'at start, var is undefined';
-    is @ticks[1].pad.variable('$a'), 1,
+    is @ticks[1].pad.variables<$a>, 1,
        'after postfix:<++>, var is 1';
-    is @ticks[2].pad.variable('$a'), 'Any',
+    is @ticks[2].pad.variables<$a>, 'Any',
        'after assignment, var is undefined';
 }

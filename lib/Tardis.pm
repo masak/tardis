@@ -68,11 +68,7 @@ class AST::Node::Literal is AST::Node {
 class AST::Node::Op is AST::Node {}
 
 class Tardis::Pad {
-    has Str @.variables;
-
-    method variable($name) {
-        'Any'
-    }
+    has Str %.variables;
 }
 
 class Tardis::Tick {
@@ -82,16 +78,16 @@ class Tardis::Tick {
 class Tardis::Debugger {
     has AST::Node::Statementlist $!program;
     has Tardis::Tick @.ticks;
-    has Tardis::Pad $!pad; # XXX: but there is more than one pad.
+    has Tardis::Pad $!pad; # XXX: there is more than one pad in general
 
     submethod BUILD($!program) {
-        my @variables;
+        my %variables;
         $!program.traverse: method {
             if self ~~ AST::Node::Declaration {
-                push @variables, $.variable.name;
+                %variables{$.variable.name} = 'Any';
             }
         };
-        $!pad = Tardis::Pad.new(:@variables);
+        $!pad = Tardis::Pad.new(:%variables);
     }
 
     method run() {
