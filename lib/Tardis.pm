@@ -60,6 +60,12 @@ class AST::Node::Assignment is AST::Node {
 }
 
 class AST::Node::Literal is AST::Node {
+    has $.value;
+
+    method new($value) {
+        self.bless(self.CREATE, :$value);
+    }
+
     method traverse(&callback) {
         &callback(self);
     }
@@ -72,11 +78,21 @@ class AST::Node::Op is AST::Node {
 }
 
 class Tardis::Pad {
-    has Str %.variables;
+    has %.variables;
+
+    method modify(Str $varname, $value) {
+        my %new-variables = %!variables;
+        %new-variables{$varname} = $value;
+        self.bless(self.CREATE, :variables(%new-variables));
+    }
 }
 
 class Tardis::Tick {
     has Tardis::Pad $.pad;
+
+    method new(:$pad) {
+        self.bless(self.CREATE, :$pad);
+    }
 }
 
 class Tardis::Debugger {
@@ -88,14 +104,33 @@ class Tardis::Debugger {
         my %variables;
         $!program.traverse: method {
             if self ~~ AST::Node::Declaration {
-                %variables{$.variable.name} = 'Any';
+                %variables{$.variable.name} = Any;
             }
         };
         $!pad = Tardis::Pad.new(:%variables);
     }
 
     method run() {
-        @!ticks.push( Tardis::Tick.new(:pad($!pad)) );
-        @!ticks.push( Tardis::Tick.new(:pad($!pad)) ) for $!program.statements;
+        my $pad = $!pad.clone;
+        @!ticks.push( Tardis::Tick.new(:pad($pad.clone)) );
+        # XXX: A for loop won't cut it for a deeply nested assignment. We'd
+        #      need something a bit more like AST::Node.traverse.
+        for $!program.statements -> $statement {
+            if $statement ~~ AST::Node::Assignment {
+                my $assignment = $statement;
+                my $varname
+                    = $assignment.lhs ~~ AST::Node::Declaration
+                      ?? $assignment.lhs.variable.name
+                      !! $assignment.lhs ~~ AST::Node::Variable
+                         ?? $assignment.lhs.name
+                         !! die 'Expected variable, found ',
+                                $assignment.lhs.WHAT;
+                $assignment.rhs ~~ AST::Node::Literal # XXX: Wrong
+                    or die 'Expected literal, found ', $assignment.rhs.WHAT;
+                my $value = $assignment.rhs.value;
+                $pad.=modify($varname, $value);
+            }
+            @!ticks.push( Tardis::Tick.new(:pad($pad.clone)) );
+        }
     }
 }
