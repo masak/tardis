@@ -62,3 +62,5 @@ is +$debugger.ticks, 3, 'assignment with ++ has 3 ticks';
     is @ticks[2].pad.variables<$a>, 'Any',
        'after assignment, var is undefined';
 }
+
+done_testing;
