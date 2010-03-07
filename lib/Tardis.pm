@@ -65,7 +65,11 @@ class AST::Node::Literal is AST::Node {
     }
 }
 
-class AST::Node::Op is AST::Node {}
+class AST::Node::Op is AST::Node {
+    method traverse(&callback) {
+        &callback(self);
+    }
+}
 
 class Tardis::Pad {
     has Str %.variables;
