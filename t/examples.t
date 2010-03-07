@@ -7,6 +7,8 @@ my Tardis::Debugger $debugger .= new(program => ());
 $debugger.run;
 
 is +$debugger.ticks, 1, 'empty program has 1 tick';
+is +$debugger.ticks[0].pad.variables, 0,
+   'there are no variables in the current pad';
 
 $debugger .= new(program => [AST::Node::Assignment.new(
     AST::Node::Declaration.new(
