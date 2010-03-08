@@ -27,3 +27,9 @@ The user can then browse through ticks 0..49366 in various intelligent ways.
 Either just go to a particular point in the execution, or ask more specific
 questions, such as "When and where was this variable last set?" or "How many
 times has this sequence point been executed?"
+
+Input from other people suggests more things to possibly do with a tick:
+saving it for posterity in a Smalltalk-style image, to be restored at a later
+date; looking into its state, changing one or more values, and then re-running
+the code from that point on. Both of these use cases would result in fewer
+cases of having to re-run a program up to a point of interest.
