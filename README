@@ -1,0 +1,12 @@
+'TARDIS' (or 'Tardis', or 'tardis') is the working name given to something
+that a few of us hope will eventually blossom out into a time-travelling
+debugger. The capital letters may give the false impression that it's an
+acronym for something -- but it isn't unless you count the original sense
+from Dr Who.
+
+For an attempt at a technical discussion on time-travelling debugging, see
+docs/theory.
+
+== License
+
+Tardis is released under Artistic 2.0. See LICENSE.
