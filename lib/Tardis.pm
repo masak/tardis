@@ -72,6 +72,13 @@ class AST::Node::Literal is AST::Node {
 }
 
 class AST::Node::Op is AST::Node {
+    has Str $.name;
+    has AST::Node @.operands;
+
+    method new(Str $name, AST::Node *@operands) {
+        self.bless(self.CREATE, :$name, :@operands);
+    }
+
     method traverse(&callback) {
         &callback(self);
     }
@@ -125,12 +132,25 @@ class Tardis::Debugger {
                          ?? $assignment.lhs.name
                          !! die 'Expected variable, found ',
                                 $assignment.lhs.WHAT;
-                $assignment.rhs ~~ AST::Node::Literal # XXX: Wrong
-                    or die 'Expected literal, found ', $assignment.rhs.WHAT;
-                my $value = $assignment.rhs.value;
+                my $value = self.get-value($assignment.rhs, $pad);
                 $pad.=modify($varname, $value);
             }
             @!ticks.push( Tardis::Tick.new(:pad($pad.clone)) );
         }
+    }
+
+    method get-value(AST::Node $node, Tardis::Pad $pad) {
+        my $value = $node ~~ AST::Node::Literal
+                      ?? $node.value
+                      !! $node ~~ AST::Node::Op
+                         ?? $pad.variables{$node.operands[0].name}
+                         !! die 'unknown ', $node.WHAT;
+        if $node ~~ AST::Node::Op {
+            my $varname = $node.operands[0].name;
+            my $new-value = $value + 1; # XXX: There are other operators, too
+            $pad.=modify($varname, $new-value);
+            @!ticks.push( Tardis::Tick.new(:pad($pad.clone)) );
+        }
+        return $value;
     }
 }
