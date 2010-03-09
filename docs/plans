@@ -1,0 +1,74 @@
+This file contains a braindump of near-future directions in which to take
+the debugger.
+
+= Actual features
+
+- Binding. Handling 'my $a; my $b := 2; # $a == 2' correctly.
+
+- C<if> statements.
+
+- C<while> loops. Work out how the ticks behave for both of these.
+
+- Functions and function calls. The smallest-that-work are probably functions
+  without a signature and without return statements. A return value would be
+  nice, though. The function needs to have its own pad, etc.
+
+= Architecture
+
+- Factor out the compilerish things into a separate project, and call that
+  'Yapsi'. APIs become good after about three clients have been implemented
+  for them. Yapsi's three clients are this debugger, a coverage tool, and
+  a static analyzer.
+
+- Figure out a way to encode which AST nodes correspond to which substrings
+  of a program. The main purpose of this is to be able to indicate the point
+  of execution in the program. It is important to be able to do this on
+  the granularity level of a sequence point, not just a statement. The most
+  intuitive way to show this is probably to highlight the piece of code to
+  be evaluated between the current sequence point and the next.
+
+- Consider creating a dedicated instruction code, rather than running off
+  the AST the whole time. The statement 'my $a = ++$a' could be represented
+  by something like this:
+
+    $0 = get-container '$a'
+    $1 = get-value $0
+    $2 = add $1, 1
+    set-value $0, $2
+    $3 = get-container '$a'
+    set-value $3, $1
+
+  The above represents unoptimized code as it would be generated from the
+  AST of the statement. There are fun opportunities for things like graph
+  coloring, so that $0 can be re-used rather than using a new $3 register.
+  (Or perhaps it could be safely deduced that $a can't have gotten a new
+  container, so that the line can be eliminated altogether.)
+
+  We could call the instruction code 'SIC': serialized instruction code.
+  Or something.
+
+  The nice thing is that sequence points can probably be collected without any
+  extra tagging; just make a new one at every 'set-value' instruction.
+
+  What does need to be tagged, however, is sufficiently precise information
+  about which piece of original program a given piece of SIC corresponds to.
+  Again, for the example statement, it could look something like this:
+
+    `at line 1, column 9..13 ('++$a')
+    $0 = get-container '$a'
+    $1 = get-value $0
+    $2 = add $1, 1
+    set-value $0, $2
+    `at line 1, column 0..13 ('my $a = ++$a')
+    $3 = get-container '$a'
+    set-value $3, $1
+
+  ('at' can also be seen as standing for 'annotation'.) Note how the
+  annotations occur after each sequence point except the last one.
+
+  [Uh, it occurs to me that the line '$2 = add $1, 1' wouldn't handle an
+  overridden prefix:<++> correctly. Actually '++$a' needs to be treated as
+  a function call, one which could possibly be inlined. Hm, tricky.]
+
+- Make an interactive shell that can step back and forth between ticks, and
+  inspect values, or make even more detailed queries.
