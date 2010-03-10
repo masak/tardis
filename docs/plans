@@ -34,18 +34,13 @@ the debugger.
   the AST the whole time. The statement 'my $a = ++$a' could be represented
   by something like this:
 
-    $0 = get-container '$a'
-    $1 = get-value $0
-    $2 = add $1, 1
-    set-value $0, $2
-    $3 = get-container '$a'
-    set-value $3, $1
+    $0 = fetch '$a'
+    $1 = add $0, 1
+    store '$a', $1
+    store '$a', $0
 
   The above represents unoptimized code as it would be generated from the
-  AST of the statement. There are fun opportunities for things like graph
-  coloring, so that $0 can be re-used rather than using a new $3 register.
-  (Or perhaps it could be safely deduced that $a can't have gotten a new
-  container, so that the line can be eliminated altogether.)
+  AST of the statement.
 
   We could call the instruction code 'SIC': serialized instruction code.
   Or something.
@@ -58,13 +53,11 @@ the debugger.
   Again, for the example statement, it could look something like this:
 
     `at line 1, column 9..13 ('++$a')
-    $0 = get-container '$a'
-    $1 = get-value $0
-    $2 = add $1, 1
-    set-value $0, $2
+    $0 = fetch '$a'
+    $1 = add $0, 1
+    store '$a', $1
     `at line 1, column 0..13 ('my $a = ++$a')
-    $3 = get-container '$a'
-    set-value $3, $1
+    store '$a', $0
 
   ('at' can also be seen as standing for 'annotation'.) Note how the
   annotations occur after each sequence point except the last one.
