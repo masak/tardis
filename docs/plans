@@ -5,6 +5,9 @@ the debugger.
 
 - Binding. Handling 'my $a; my $b := 2; # $a == 2' correctly.
 
+- Make an interactive shell that can step back and forth between ticks, and
+  inspect values, or make even more detailed queries.
+
 - C<if> statements.
 
 - C<while> loops. Work out how the ticks behave for both of these.
@@ -69,6 +72,3 @@ the debugger.
   [Uh, it occurs to me that the line '$2 = add $1, 1' wouldn't handle an
   overridden prefix:<++> correctly. Actually '++$a' needs to be treated as
   a function call, one which could possibly be inlined. Hm, tricky.]
-
-- Make an interactive shell that can step back and forth between ticks, and
-  inspect values, or make even more detailed queries.
