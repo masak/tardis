@@ -1,0 +1,90 @@
+#!/opt/perl/bin/perl -w
+use strict;
+use v5.010;
+
+use Regexp::Grammars;
+
+my $p6program = qr{
+    ^ <[Statement]> ** (;) $
+
+    <objrule: AST::Statement>
+        <Expression> | (?:)
+
+    <objrule: AST::Expression>
+        <Variable> | <Literal> | <Declaration> | <Assignment> | <Binding>
+
+    <objrule: AST::Lvalue>
+        <Variable> | <Declaration>
+
+    <objrule: AST::Variable>
+        \$\w+
+
+    <objrule: AST::Literal>
+        \d+
+
+    <objrule: AST::Declaration>
+        my <Variable>
+
+    <objrule: AST::Assignment>
+        <Lvalue> = <Expression>
+
+    <objrule: AST::Binding>
+        <Lvalue> := <Expression>
+}xms;
+
+my %d;
+sub findvars {
+    my ($node) = @_;
+    given (ref($node)) {
+        when ('AST::Statement') {
+            if (exists $node->{Expression}) {
+                findvars($node->{Expression});
+            }
+        }
+        when ('AST::Expression') {
+            for my $subrule (<Variable Declaration Assignment Binding>) {
+                if (exists $node->{$subrule}) {
+                    findvars($node->{$subrule});
+                }
+            }
+        }
+        when ('AST::Lvalue') {
+            for my $subrule (<Variable Declaration>) {
+                if (exists $node->{$subrule}) {
+                    findvars($node->{$subrule});
+                }
+            }
+        }
+        when ('AST::Variable') {
+            if (!exists $d{ $node->{''} }) {
+                die 'Invalid. ', $node->{''}, " not declared before use.\n";
+            }
+        }
+        when ('AST::Declaration') {
+            ++$d{ $node->{Variable}{''} };
+        }
+        when ('AST::Assignment') {
+            findvars($node->{Lvalue});
+            findvars($node->{Expression});
+        }
+        when ('AST::Binding') {
+            findvars($node->{Lvalue});
+            findvars($node->{Expression});
+        }
+        default {
+            die "Don't know what to do with an ", ref($node);
+        }
+    }
+}
+
+while (<>) {
+    if (/$p6program/) {
+        %d = ();
+        eval {
+            findvars($/{Statement}->[0]);
+        };
+        warn $@             if $@;
+        warn "Valid.\n" unless $@;
+        say '';
+    }
+}
