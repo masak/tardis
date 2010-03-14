@@ -77,14 +77,89 @@ sub findvars {
     }
 }
 
+my $c = 0;
+sub unique_register {
+    return '$' . $c++;
+}
+
+my @s;
+sub sicify {
+    my ($node) = @_;
+    given (ref($node)) {
+        when ('AST::Statement') {
+            if (exists $node->{Expression}) {
+                return sicify($node->{Expression});
+            }
+        }
+        when ('AST::Expression') {
+            for my $subrule (<Variable Literal Declaration Assignment Binding>) {
+                if (exists $node->{$subrule}) {
+                    return sicify($node->{$subrule});
+                }
+            }
+        }
+        when ('AST::Lvalue') {
+            for my $subrule (<Variable Declaration>) {
+                if (exists $node->{$subrule}) {
+                    return sicify($node->{$subrule});
+                }
+            }
+        }
+        when ('AST::Variable') {
+            my $register = unique_register;
+            my $variable = "'" . $node->{''} . "'";
+            push @s, "$register = fetch $variable";
+            return ($register, $variable);
+        }
+        when ('AST::Literal') {
+            my $register = unique_register;
+            my $literal = $node->{''};
+            push @s, "$register = $literal";
+            return ($register, $literal);
+        }
+        when ('AST::Declaration') {
+            my ($register, $variable) = sicify($node->{Variable});
+            push @s, "init $variable";
+            return ($register, $variable);
+        }
+        when ('AST::Assignment') {
+            my ($register) = sicify($node->{Expression});
+            my (undef, $variable) = sicify($node->{Lvalue});
+            push @s, "store $variable, $register";
+            return ($register, $variable);
+        }
+        when ('AST::Binding') {
+            my ($register, $rightvar) = sicify($node->{Expression});
+            my (undef, $leftvar) = sicify($node->{Lvalue});
+            push @s, "bind $leftvar, $rightvar";
+            return ($register, $leftvar);
+        }
+        default {
+            die "Don't know what to do with an ", ref($node);
+        }
+    }
+    return;
+}
+
 while (<>) {
     if (/$p6program/) {
         %d = ();
         eval {
-            findvars($/{Statement}->[0]);
+            for my $statement (@{ $/{Statement} }) {
+                findvars($statement);
+            }
         };
-        warn $@             if $@;
-        warn "Valid.\n" unless $@;
-        say '';
+        if ($@) {
+            warn $@;
+            next;
+        }
+        $c = 0;
+        @s = ();
+        for my $statement (@{ $/{Statement} }) {
+            sicify($statement);
+        }
+        for my $s (@s) {
+            say "\x09", $s;
+        }
     }
 }
