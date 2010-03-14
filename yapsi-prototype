@@ -2,35 +2,39 @@
 use strict;
 use v5.010;
 
-use Regexp::Grammars;
+my $p6program;
 
-my $p6program = qr{
-    ^ <[Statement]> ** (;) $
+{
+    use Regexp::Grammars;
 
-    <objrule: AST::Statement>
-        <Expression> | (?:)
+    $p6program = qr{
+        ^ <[Statement]> ** (;) $
 
-    <objrule: AST::Expression>
-        <Variable> | <Literal> | <Declaration> | <Assignment> | <Binding>
+        <objrule: AST::Statement>
+            <Expression> | (?:)
 
-    <objrule: AST::Lvalue>
-        <Variable> | <Declaration>
+        <objrule: AST::Expression>
+            <Variable> | <Literal> | <Declaration> | <Assignment> | <Binding>
 
-    <objrule: AST::Variable>
-        \$\w+
+        <objrule: AST::Lvalue>
+            <Variable> | <Declaration>
 
-    <objrule: AST::Literal>
-        \d+
+        <objrule: AST::Variable>
+            \$\w+
 
-    <objrule: AST::Declaration>
-        my <Variable>
+        <objrule: AST::Literal>
+            \d+
 
-    <objrule: AST::Assignment>
-        <Lvalue> = <Expression>
+        <objrule: AST::Declaration>
+            my <Variable>
 
-    <objrule: AST::Binding>
-        <Lvalue> := <Expression>
-}xms;
+        <objrule: AST::Assignment>
+            <Lvalue> = <Expression>
+
+        <objrule: AST::Binding>
+            <Lvalue> := <Expression>
+    }xms;
+}
 
 my %d;
 sub findvars {
@@ -141,6 +145,26 @@ sub sicify {
     return;
 }
 
+sub declutter {
+    my ($instructions) = @_;
+    my $i = 0;
+    while ($i < @$instructions) {
+        my $line = $instructions->[$i];
+        if ($line =~ / ^ (\$ \d+) \s = /x) {
+            my $varname = $1;
+            my $usages_later = 0;
+            for my $j ($i+1..@$instructions-1) {
+                ++$usages_later if index($instructions->[$j], $varname) >= 0;
+            }
+            if (!$usages_later) {
+                splice(@$instructions, $i, 1);
+                --$i;
+            }
+        }
+        ++$i;
+    }
+}
+
 while (<>) {
     if (/$p6program/) {
         %d = ();
@@ -158,6 +182,7 @@ while (<>) {
         for my $statement (@{ $/{Statement} }) {
             sicify($statement);
         }
+        declutter(\@s);
         for my $s (@s) {
             say "\x09", $s;
         }
