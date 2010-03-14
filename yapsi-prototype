@@ -165,6 +165,23 @@ sub declutter {
     }
 }
 
+sub renumber {
+    my ($instructions) = @_;
+    my $next_number = 0;
+    my %mapping;
+    for my $line (@$instructions) {
+        while ($line =~ / (\$ \d+) /xg) {
+            my $varname = $1;
+            if (!exists $mapping{$varname}) {
+                # '&' rather than '$' to avoid infinite substitution loops
+                $mapping{$varname} = '&' . $next_number++;
+            }
+            $line =~ s[\Q$varname\E][$mapping{$varname}]ge;
+        }
+        $line =~ s[\&][\$]g;
+    }
+}
+
 while (<>) {
     if (/$p6program/) {
         %d = ();
@@ -183,6 +200,7 @@ while (<>) {
             sicify($statement);
         }
         declutter(\@s);
+        renumber(\@s);
         for my $s (@s) {
             say "\x09", $s;
         }
