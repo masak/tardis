@@ -79,7 +79,10 @@ sub findvars {
             }
         }
         when ('AST::Declaration') {
-            ++$d{ $node->{Variable}{''} };
+            my $name = $node->{Variable}{''};
+            if ($d{$name}++) {
+                warn "Redeclaration of variable $name\n";
+            }
         }
         when ('AST::Assignment') {
             findvars($node->{Lvalue});
