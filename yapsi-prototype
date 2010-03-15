@@ -2,6 +2,20 @@
 use strict;
 use v5.010;
 
+# The program forms a simple eval-compile-serialize loop. Here are the kinds
+# of programs recognized.
+#
+# ;
+# 42;
+# my $a;
+# my $a = 42;
+# my $a = $a;
+# my $a; my $b;
+# my $a = my $b = 42;
+# my $a; my $a; my $a;
+# my $a := 42; my $b = $a;
+# my $a; my $b := $a; $a = 42;
+
 my $p6program;
 
 {
