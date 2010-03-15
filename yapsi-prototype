@@ -81,7 +81,7 @@ sub findvars {
         when ('AST::Declaration') {
             my $name = $node->{Variable}{''};
             if ($d{$name}++) {
-                warn "Redeclaration of variable $name\n";
+                warn "Useless redeclaration of variable $name\n";
             }
         }
         when ('AST::Assignment') {
