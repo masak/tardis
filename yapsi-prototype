@@ -197,26 +197,29 @@ sub renumber {
 }
 
 while (<>) {
-    if (/$p6program/) {
-        %d = ();
-        eval {
-            for my $statement (@{ $/{Statement} }) {
-                findvars($statement);
-            }
-        };
-        if ($@) {
-            warn $@;
-            next;
-        }
-        $c = 0;
-        @s = ();
+    unless (/$p6program/) {
+        warn "Doesn't parse.\n";
+        next;
+    }
+
+    %d = ();
+    eval {
         for my $statement (@{ $/{Statement} }) {
-            sicify($statement);
+            findvars($statement);
         }
-        declutter(\@s);
-        renumber(\@s);
-        for my $s (@s) {
-            say "\x09", $s;
-        }
+    };
+    if ($@) {
+        warn $@;
+        next;
+    }
+    $c = 0;
+    @s = ();
+    for my $statement (@{ $/{Statement} }) {
+        sicify($statement);
+    }
+    declutter(\@s);
+    renumber(\@s);
+    for my $s (@s) {
+        say "\x09", $s;
     }
 }
