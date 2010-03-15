@@ -137,7 +137,6 @@ sub sicify {
         }
         when ('AST::Declaration') {
             my ($register, $variable) = sicify($node->{Variable});
-            push @s, "init $variable";
             return ($register, $variable);
         }
         when ('AST::Assignment') {
