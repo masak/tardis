@@ -151,6 +151,9 @@ sub sicify {
         when ('AST::Binding') {
             my ($register, $rightvar) = sicify($node->{Expression});
             my (undef, $leftvar) = sicify($node->{Lvalue});
+            if ($rightvar =~ / ^ \d+ $ /x) {
+                $rightvar = $register;
+            }
             push @s, "bind $leftvar, $rightvar";
             return ($register, $leftvar);
         }
