@@ -4,7 +4,6 @@ use Tardis;
 # parse cmdline opts, instantiate a Tardis Debugger and run it
 # masak++ parser goodness to go here
 say "# Compiling '-e'...";
-say "# Running...";
 
 # for now we just give it an AST 
 my Tardis::Debugger $t .= new(
@@ -18,6 +17,8 @@ my Tardis::Debugger $t .= new(
         )
     )
 );
+
+say "# Running...";
 $t.run;
 
 my $current_tick = 0;
@@ -29,14 +30,14 @@ say "# Finished. Ticks: 0.." ~ @ticks.end;
 while (my $cmd = prompt '> ') {
 
     given $cmd {
-        when 'look'        { look() }
-        when 'step'        { step() } 
-        when 'n'           { step() }
+        when 'look'          { look }
+        when 'step'          { step() } 
+        when 'n'             { step() }
         when /^go\s+(\d+)$/  { go(+$0) }
-        when 'quit'        { quit() }
-        when 'q'           { quit() }
+        when 'quit'          { quit() }
+        when 'q'             { quit() }
 
-        default            { say  "I don't understand" }
+        default              { say  "I don't understand" }
     }
 }
 
@@ -46,16 +47,16 @@ sub look() {
     for @ticks[$current_tick].pad.variables -> $var {
         say $var.perl;
     }
-    #say @ticks[$current_tick].pad.variables.perl
 }
 
+# this loops around back to the first step if we run off the end
 sub step() {
-    $current_tick = 0 if (++$current_tick > @ticks.end);
+    $current_tick = 0 if ++$current_tick > @ticks.end;
     look();
 }
 
 sub go(Num $tick) {
-    if (0 <= $tick <= @ticks.end) {
+    if 0 <= $tick <= @ticks.end {
         $current_tick = $tick;
         look();
     }
