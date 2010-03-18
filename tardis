@@ -1,0 +1,70 @@
+use v6;
+use Tardis;
+
+# parse cmdline opts, instantiate a Tardis Debugger and run it
+# masak++ parser goodness to go here
+say "# Compiling '-e'...";
+say "# Running...";
+
+# for now we just give it an AST 
+my Tardis::Debugger $t .= new(
+    program => AST::Node::Statementlist.new(
+        AST::Node::Assignment.new(
+            AST::Node::Declaration.new(
+                'my',
+                AST::Node::Variable.new('$a')
+            ),
+            AST::Node::Literal.new(42)
+        )
+    )
+);
+$t.run;
+
+my $current_tick = 0;
+my @ticks = $t.ticks;
+say "# Finished. Ticks: 0.." ~ @ticks.end;
+
+
+
+while (my $cmd = prompt '> ') {
+
+    given $cmd {
+        when 'look'        { look() }
+        when 'step'        { step() } 
+        when 'n'           { step() }
+        when /^go\s+(\d+)$/  { go(+$0) }
+        when 'quit'        { quit() }
+        when 'q'           { quit() }
+
+        default            { say  "I don't understand" }
+    }
+}
+
+
+# this just dresses up @ticks[$current_tick] and prints to STDOUT
+sub look() {
+    for @ticks[$current_tick].pad.variables -> $var {
+        say $var.perl;
+    }
+    #say @ticks[$current_tick].pad.variables.perl
+}
+
+sub step() {
+    $current_tick = 0 if (++$current_tick > @ticks.end);
+    look();
+}
+
+sub go(Num $tick) {
+    if (0 <= $tick <= @ticks.end) {
+        $current_tick = $tick;
+        look();
+    }
+    else {
+        say "Outside range.";
+    }
+}
+
+sub quit() {
+    exit;
+}
+
