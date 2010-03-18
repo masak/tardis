@@ -1,3 +1,4 @@
+#!/usr/bin/alpha
 use v6;
 use Tardis;
 
@@ -21,15 +22,13 @@ my Tardis::Debugger $t .= new(
 say "# Running...";
 $t.run;
 
-my $current_tick = 0;
+my $current-tick = 0;
 my @ticks = $t.ticks;
-say "# Finished. Ticks: 0.." ~ @ticks.end;
+say "# Finished. Ticks: 0..", @ticks.end;
 
-
-
-while (my $cmd = prompt '> ') {
-
+while defined(my $cmd = prompt '> ') {
     given $cmd {
+        when /^ \s* $/       { }
         when 'look'          { look }
         when 'step'          { step() } 
         when 'n'             { step() }
@@ -37,31 +36,39 @@ while (my $cmd = prompt '> ') {
         when 'quit'          { quit() }
         when 'q'             { quit() }
 
-        default              { say  "I don't understand" }
+        default              { say  "Sorry, unrecognized command." }
     }
 }
 
-
-# this just dresses up @ticks[$current_tick] and prints to STDOUT
+# this just dresses up @ticks[$current-tick] and prints to STDOUT
 sub look() {
-    for @ticks[$current_tick].pad.variables -> $var {
-        say $var.perl;
+    say '{';
+    for @ticks[$current-tick].pad.variables -> $var {
+        say sprintf '  %s = %s', $var.key, $var.value.perl;
     }
+    say '}';
 }
 
-# this loops around back to the first step if we run off the end
 sub step() {
-    $current_tick = 0 if ++$current_tick > @ticks.end;
+    if $current-tick == @ticks.end {
+        say 'Can not go beyond last tick.';
+        return;
+    }
+    ++$current-tick;
     look();
 }
 
+# RAKUDO: Should really be typed 'Int'.
 sub go(Num $tick) {
-    if 0 <= $tick <= @ticks.end {
-        $current_tick = $tick;
-        look();
+    if $current-tick > @ticks.end {
+        say 'Can not go beyond last tick.';
+    }
+    elsif $current-tick < 0 {
+        say 'Ticks start at 0.';
     }
     else {
-        say "Outside range.";
+        $current-tick = $tick;
+        look();
     }
 }
 
