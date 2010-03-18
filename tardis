@@ -60,10 +60,10 @@ sub step() {
 
 # RAKUDO: Should really be typed 'Int'.
 sub go(Num $tick) {
-    if $current-tick > @ticks.end {
+    if $tick > @ticks.end {
         say 'Can not go beyond last tick.';
     }
-    elsif $current-tick < 0 {
+    elsif $tick < 0 {
         say 'Ticks start at 0.';
     }
     else {
