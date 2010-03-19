@@ -59,17 +59,12 @@ sub step() {
 }
 
 # RAKUDO: Should really be typed 'Int'.
-sub go(Num $tick) {
-    if $tick > @ticks.end {
-        say 'Can not go beyond last tick.';
-    }
-    elsif $tick < 0 {
-        say 'Ticks start at 0.';
-    }
-    else {
-        $current-tick = $tick;
-        look();
-    }
+multi sub go(Num $tick where { $tick > @ticks.end }) {
+    say 'Can not go beyond last tick.';
+}
+multi sub go(Num $tick) {
+    $current-tick = $tick;
+    look();
 }
 
 sub quit() {
