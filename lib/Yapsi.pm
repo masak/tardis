@@ -3,13 +3,14 @@ use v6;
 grammar Yapsi::Perl6::Grammar {
     regex TOP { ^ <statement> ** ';' $ }
     token statement { <expression> || '' }
-    token expression { <assignment> || <variable> || <literal>
+    token expression { <assignment> || <binding> || <variable> || <literal>
                        || <declaration> || <saycall> }
     token lvalue { <declaration> || <variable> }
     token variable { '$' \w+ }
     token literal { \d+ }
     rule  declaration { 'my' <variable> }
     rule  assignment { <lvalue> '=' <expression> }
+    rule  binding { <lvalue> ':=' <expression> }
     rule  saycall { 'say' <expression> }  # very temporary solution
 }
 
@@ -22,7 +23,7 @@ multi sub find-vars(Match $/, 'statement') {
 }
 
 multi sub find-vars(Match $/, 'expression') {
-    for <variable declaration assignment saycall> -> $subrule {
+    for <assignment binding variable declaration saycall> -> $subrule {
         if $/{$subrule} -> $e {
             find-vars($e, $subrule);
         }
@@ -55,6 +56,11 @@ multi sub find-vars(Match $/, 'declaration') {
 }
 
 multi sub find-vars(Match $/, 'assignment') {
+    find-vars($<lvalue>, 'lvalue');
+    find-vars($<expression>, 'expression');
+}
+
+multi sub find-vars(Match $/, 'binding') {
     find-vars($<lvalue>, 'lvalue');
     find-vars($<expression>, 'expression');
 }
