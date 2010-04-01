@@ -201,14 +201,31 @@ class Yapsi::Compiler {
     }
 }
 
+class Yapsi::Runtime {
+    method run(@sic) {
+        my @r;
+        my %pad;
+        for @sic {
+            when /^ '$'(\d+) ' = ' (\d+) $/
+                { @r[+$0] = $1 }
+            when /^ 'store '\'(<-[']>+)\' ', $'(\d+) $/
+                { %pad{~$0} = @r[+$1] }
+            when /^ '$'(\d+) ' = fetch '\'(<-[']>+)\' $/
+                { @r[+$0] = %pad{~$1} }
+            when /^ 'say $'(\d+) $/
+                { say @r[+$0] }
+            default { say "ERK $_" }
+        }
+    }
+}
+
 my Yapsi::Compiler $compiler .= new;
+my Yapsi::Runtime $runtime .= new;
 loop {
     my $program = prompt('> ') // last;
     try {
         my @sic = $compiler.compile($program);
-        for @sic -> $line {
-            say "\t", $line;
-        }
+        $runtime.run(@sic);
     }
     say $! if $!;
 }
