@@ -40,7 +40,7 @@ multi sub find-vars(Match $/, 'lvalue') {
 
 multi sub find-vars(Match $/, 'variable') {
     if !%d.exists( ~$/ ) {
-        die 'Invalid. ', ~$/, "not declared before use";
+        die "Invalid. $/ not declared before use";
     }
 }
 
@@ -73,6 +73,116 @@ multi sub find-vars($/, $node) {
     die "Don't know what to do with a $node";
 }
 
+my $c;
+sub unique-register {
+    return '$' ~ $c++;
+}
+
+my @sic;
+
+multi sub sicify(Match $/, 'statement') {
+    if $<expression> -> $e {
+        return sicify($e, 'expression');
+    }
+}
+
+multi sub sicify(Match $/, 'expression') {
+    for <variable literal declaration assignment binding saycall> -> $subrule {
+        if $/{$subrule} -> $e {
+            return sicify($e, $subrule);
+        }
+    }
+}
+
+multi sub sicify(Match $/, 'lvalue') {
+    for <variable declaration> -> $subrule {
+        if $/{$subrule} -> $e {
+            return sicify($e, $subrule);
+        }
+    }
+}
+
+multi sub sicify(Match $/, 'variable') {
+    my $register = unique-register;
+    my $variable = "'$/'";
+    push @sic, "$register = fetch $variable";
+    return ($register, $variable);
+}
+
+multi sub sicify(Match $/, 'literal') {
+    my $register = unique-register;
+    my $literal = ~$/;
+    push @sic, "$register = $literal";
+    return ($register, $literal);
+}
+
+multi sub sicify(Match $/, 'declaration') {
+    return sicify($<variable>, 'variable');
+}
+
+multi sub sicify(Match $/, 'assignment') {
+    my ($register, $) = sicify($<expression>, 'expression');
+    my ($, $variable) = sicify($<lvalue>, 'lvalue');
+    push @sic, "store $variable, $register";
+    return ($register, $variable);
+}
+
+multi sub sicify(Match $/, 'binding') {
+    my ($register, $rightvar) = sicify($<expression>, 'expression');
+    my ($, $leftvar) = sicify($<lvalue>, 'lvalue');
+    if $rightvar ~~ / ^ \d+ $ / { # hm. this is brittle and suboptimal.
+        $rightvar = $register;
+    }
+    push @sic, "bind $leftvar, $rightvar";
+    return ($register, $leftvar);
+}
+
+multi sub sicify(Match $/, 'saycall') {
+    my ($register, $) = sicify($<expression>, 'expression');
+    my $result = unique-register;
+    push @sic, "say $register";
+    push @sic, "$result = 1";
+    return ($result, 1);
+}
+
+multi sub sicify(Match $/, $node) {
+    die "Don't know what to do with a $node";
+}
+
+sub declutter(@instructions) {
+    my @decluttered;
+    for @instructions.kv -> $i, $line {
+        if $line !~~ / ^ ('$' \d+) ' =' / {
+            push @decluttered, $line;
+        }
+        else {
+            my $varname = ~$0;
+            my Bool $usages-later = False;
+            for $i+1 ..^ @instructions -> $j {
+                ++$usages-later if defined index(@instructions[$j], $varname);
+            }
+            if $usages-later {
+                push @decluttered, $line;
+            }
+        }
+    }
+    return @decluttered;
+}
+
+sub renumber(@instructions) {
+    my $number = 0;
+    my %mapping;
+    return @instructions.map: {
+        .subst( :global, / ('$' \d+) /, {
+            my $varname = ~$0;
+            if !%mapping.exists($varname) {
+                %mapping{$varname} = '$' ~ $number++;
+            }
+            %mapping{$varname}
+        } );
+    };
+}
+
 class Yapsi::Compiler {
     method compile($program) {
         die "Could not parse"
@@ -81,6 +191,25 @@ class Yapsi::Compiler {
         for $<statement> -> $statement {
             find-vars($statement, 'statement');
         }
+        $c = 0;
+        @sic = ();
+        for $<statement> -> $statement {
+            sicify($statement, 'statement');
+        }
+        @sic = renumber(declutter(@sic));
+        return @sic;
     }
 }
 
+my Yapsi::Compiler $compiler .= new;
+loop {
+    my $program = prompt('> ') // last;
+    try {
+        my @sic = $compiler.compile($program);
+        for @sic -> $line {
+            say "\t", $line;
+        }
+    }
+    say $! if $!;
+}
+say '';
