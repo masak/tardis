@@ -3,9 +3,11 @@ use v6;
 grammar Yapsi::Perl6::Grammar {
     regex TOP { ^ <statement> ** ';' $ }
     token statement { <expression> || '' }
-    token expression { <variable> || <declaration> }
+    token expression { <variable> || <literal> || <declaration> || <saycall> }
     token variable { '$' \w+ }
+    token literal { \d+ }
     rule  declaration { 'my' <variable> }
+    rule  saycall { 'say' <expression> }  # very temporary solution
 }
 
 my %d; # a variable gets an entry in %d when it's declared
@@ -17,7 +19,7 @@ multi sub find-vars(Match $/, 'statement') {
 }
 
 multi sub find-vars(Match $/, 'expression') {
-    for <variable declaration> -> $subrule {
+    for <variable declaration saycall> -> $subrule {
         if $/{$subrule} -> $e {
             find-vars($e, $subrule);
         }
@@ -26,15 +28,23 @@ multi sub find-vars(Match $/, 'expression') {
 
 multi sub find-vars(Match $/, 'variable') {
     if !%d.exists( ~$/ ) {
-        die 'Invalid. ', ~$/, "not declared before use.\n";
+        die 'Invalid. ', ~$/, "not declared before use";
     }
+}
+
+multi sub find-vars(Match $/, 'literal') {
+    die "This multi variant should never be called";
 }
 
 multi sub find-vars(Match $/, 'declaration') {
     my $name = ~$<variable>;
     if %d{$name}++ {
-        warn "Useless redeclaration of variable $name\n";
+        warn "Useless redeclaration of variable $name";
     }
+}
+
+multi sub find-vars(Match $/, 'saycall') {
+    find-vars($<expression>, 'expression');
 }
 
 multi sub find-vars($/, $node) {

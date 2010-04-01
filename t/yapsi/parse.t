@@ -9,8 +9,12 @@ my Yapsi::Compiler $c .= new;
 my @programs-that-parse =
     '',
     ';',
+    '42',
+    '42;',
     'my $a',
     'my $a;',
+    'say 42',
+    'my $a; say $a',
 ;
 
 for @programs-that-parse -> $program {
@@ -27,6 +31,8 @@ my @programs-that-don't-parse =   # '
     'my',
     '$a; my $a',
     'my $a =',
+    'say $a',
+    'say $a; my $a',
 ;
 
 for @programs-that-don't-parse -> $program { # '
