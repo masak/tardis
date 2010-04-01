@@ -3,10 +3,13 @@ use v6;
 grammar Yapsi::Perl6::Grammar {
     regex TOP { ^ <statement> ** ';' $ }
     token statement { <expression> || '' }
-    token expression { <variable> || <literal> || <declaration> || <saycall> }
+    token expression { <variable> || <literal> || <declaration>
+                       || <assignment> || <saycall> }
+    token lvalue { <declaration> || <variable> }
     token variable { '$' \w+ }
     token literal { \d+ }
     rule  declaration { 'my' <variable> }
+    rule  assignment { <lvalue> '=' <expression> }
     rule  saycall { 'say' <expression> }  # very temporary solution
 }
 
@@ -19,7 +22,15 @@ multi sub find-vars(Match $/, 'statement') {
 }
 
 multi sub find-vars(Match $/, 'expression') {
-    for <variable declaration saycall> -> $subrule {
+    for <variable declaration assignment saycall> -> $subrule {
+        if $/{$subrule} -> $e {
+            find-vars($e, $subrule);
+        }
+    }
+}
+
+multi sub find-vars(Match $/, 'lvalue') {
+    for <variable declaration> -> $subrule {
         if $/{$subrule} -> $e {
             find-vars($e, $subrule);
         }
@@ -41,6 +52,11 @@ multi sub find-vars(Match $/, 'declaration') {
     if %d{$name}++ {
         warn "Useless redeclaration of variable $name";
     }
+}
+
+multi sub find-vars(Match $/, 'assignment') {
+    find-vars($<lvalue>, 'lvalue');
+    find-vars($<expression>, 'expression');
 }
 
 multi sub find-vars(Match $/, 'saycall') {

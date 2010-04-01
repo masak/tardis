@@ -14,6 +14,9 @@ my @programs-that-parse =
     'my $a',
     'my $a;',
     'say 42',
+    'my $a = 42;',
+    'my $a; $a = 42;',
+    'my $a; my $a; my $a',
     'my $a; say $a',
 ;
 
@@ -31,6 +34,7 @@ my @programs-that-don't-parse =   # '
     'my',
     '$a; my $a',
     'my $a =',
+    '$a = 42',
     'say $a',
     'say $a; my $a',
 ;
