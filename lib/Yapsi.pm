@@ -3,8 +3,8 @@ use v6;
 grammar Yapsi::Perl6::Grammar {
     regex TOP { ^ <statement> ** ';' $ }
     token statement { <expression> || '' }
-    token expression { <variable> || <literal> || <declaration>
-                       || <assignment> || <saycall> }
+    token expression { <assignment> || <variable> || <literal>
+                       || <declaration> || <saycall> }
     token lvalue { <declaration> || <variable> }
     token variable { '$' \w+ }
     token literal { \d+ }
@@ -50,7 +50,7 @@ multi sub find-vars(Match $/, 'literal') {
 multi sub find-vars(Match $/, 'declaration') {
     my $name = ~$<variable>;
     if %d{$name}++ {
-        warn "Useless redeclaration of variable $name";
+        $*ERR.say: "Useless redeclaration of variable $name";
     }
 }
 
