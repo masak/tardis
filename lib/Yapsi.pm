@@ -192,7 +192,7 @@ class Yapsi::Compiler {
             find-vars($statement, 'statement');
         }
         $c = 0;
-        @sic = ();
+        @sic = '`lexicals: <' ~ (join ' ', %d.keys) ~ '>';
         for $<statement> -> $statement {
             sicify($statement, 'statement');
         }
@@ -205,16 +205,44 @@ class Yapsi::Runtime {
     method run(@sic) {
         my @r;
         my %pad;
+        my @containers;
         for @sic {
-            when /^ '$'(\d+) ' = ' (\d+) $/
-                { @r[+$0] = $1 }
-            when /^ 'store '\'(<-[']>+)\' ', $'(\d+) $/
-                { %pad{~$0} = @r[+$1] }
-            when /^ '$'(\d+) ' = fetch '\'(<-[']>+)\' $/
-                { @r[+$0] = %pad{~$1} }
-            when /^ 'say $'(\d+) $/
-                { say @r[+$0] }
-            default { say "ERK $_" }
+            when /^ '`lexicals: <' (\S+ ** \s) '>' $ / {
+                for $0.comb(/\S+/) -> $var {
+                    %pad{$var} = { :type<container>, :n(+@containers) };
+                    push @containers, 'Any()';
+                }
+            }
+            when /^ '$'(\d+) ' = ' (\d+) $/ {
+                @r[+$0] = $1
+            }
+            when /^ 'store ' \'(<-[']>+)\' ', $'(\d+) $/ {
+                my $thing = %pad{~$0};
+                if $thing<type> eq 'container' {
+                    my $n = $thing<n>;
+                    @containers[$n] = @r[+$1];
+                }
+                else {
+                    die "Cannot store something in readonly symbol ~$0";
+                }
+            }
+            when /^ '$'(\d+) ' = fetch '\'(<-[']>+)\' $/ {
+                my $thing = %pad{~$1};
+                if $thing<type> eq 'container' {
+                    my $n = $thing<n>;
+                    @r[+$0] = @containers[$n];
+                }
+                else { # immadiate
+                    @r[+$0] = $thing<value>;
+                }
+            }
+            when /^ 'bind ' \'(<-[']>+)\' ', ' \'(<-[']>+)\' $/ {
+                %pad{~$0} = %pad{~$1};
+            }
+            when /^ 'say $'(\d+) $/ {
+                say @r[+$0]
+            }
+            default { die "Couldn't handle instruction `$_`" }
         }
     }
 }
