@@ -1,29 +1,35 @@
 #!/usr/bin/alpha
 use v6;
 use Tardis;
+use Yapsi;
 
-# parse cmdline opts, instantiate a Tardis Debugger and run it
-# masak++ parser goodness to go here
-say "# Compiling '-e'...";
+my $program;
+my $stepping;
+if @*ARGS == 2 && @*ARGS[0] eq '-e' {
+    $program = @*ARGS[1];
+}
+elsif @*ARGS == 1 {
+    $program = slurp @*ARGS[0];
+}
+else {
+    die "Usage: `$*PROGRAM_NAME <file>` or `$*PROGRAM_NAME -e '<program>'`";
+}
 
-# for now we just give it an AST 
-my Tardis::Debugger $t .= new(
-    program => AST::Node::Statementlist.new(
-        AST::Node::Assignment.new(
-            AST::Node::Declaration.new(
-                'my',
-                AST::Node::Variable.new('$a')
-            ),
-            AST::Node::Literal.new(42)
-        )
-    )
-);
+my Yapsi::Compiler $c .= new;
+my Tardis::Debugger $d .= new;
 
-say "# Running...";
-$t.run;
+try {
+    say "# Compiling '-e'...";
+    my @sic = $c.compile($program);
+    warn $_ for $c.warnings;
+
+    say "# Running...";
+    $d.run(@sic);
+}
+say $! if $!;
 
 my $current-tick = 0;
-my @ticks = $t.ticks;
+my @ticks = $d.ticks;
 say "# Finished. Ticks: 0..", @ticks.end;
 
 while defined(my $cmd = prompt '> ') {
@@ -42,11 +48,17 @@ while defined(my $cmd = prompt '> ') {
 
 # this just dresses up @ticks[$current-tick] and prints to STDOUT
 sub look() {
-    say '{';
-    for @ticks[$current-tick].pad.variables -> $var {
-        say sprintf '  %s = %s', $var.key, $var.value.perl;
+    my $tick = @ticks[$current-tick];
+
+    for $tick.keys -> $block {
+        say $block ~ ':';
+        say '{';
+        # for $tick{%block} -> var {...} doesn't work here
+        $tick{$block}.map({ 
+            say sprintf '  %s = %s', $_.key, $_.value;
+        });
+        say '}';
     }
-    say '}';
 }
 
 sub step() {
