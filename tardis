@@ -53,8 +53,8 @@ sub look() {
     for $tick.keys -> $block {
         say $block ~ ':';
         say '{';
-        # for $tick{%block} -> var {...} doesn't work here
-        $tick{$block}.map({ 
+        # for $tick{$block} -> $var {...} doesn't work here
+        $tick{$block}.map({
             say sprintf '  %s = %s', $_.key, $_.value;
         });
         say '}';
