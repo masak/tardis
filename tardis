@@ -4,7 +4,6 @@ use Tardis;
 use Yapsi;
 
 my $program;
-my $stepping;
 if @*ARGS == 2 && @*ARGS[0] eq '-e' {
     $program = @*ARGS[1];
 }
