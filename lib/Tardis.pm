@@ -6,13 +6,13 @@ class Tardis::Debugger is Yapsi::Runtime {
 
     method tick() {
         my %p;
-        for $!env.pads.keys -> $block {
-            my @variables;
-            for $!env.pads{$block}.keys -> $var {
-                push @variables, $var => self.get-value-of($var);
+        my $lexpad = $.current-lexpad;
+        while defined $lexpad {
+            for $lexpad.names.kv -> $name, $slot {
+                %p{$name} //= $lexpad.slots[$slot].fetch.?payload;
             }
-            %p{$block} = @variables;
+            $lexpad.=outer;
         }
-        @.ticks.push: \%p;
+        @.ticks.push: { %p };
     }
 }

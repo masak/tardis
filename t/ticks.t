@@ -11,9 +11,9 @@ my @programs-ticks =
     'my $a',                            1,    'uninitialised variable',
     'my $a = 42',                       2,    'initalised variable',
     'my $a = 42; ++$a',                 3,    'pre-increment',
-    'my $a = 42; my $b; { $b = 5 }',    3,    'immediate blocks',
+    'my $a = 42; my $b; { $b = 5 }',    4,    'immediate blocks',
     'my $a = 42; { my $b = 5 }',        4,    'variable initialisation in immediate blocks',
-    '{}; my $a = 42; { my $b = 5 };',   4,    'multiple immediate blocks',
+    '{}; my $a = 42; { my $b = 5 };',   5,    'multiple immediate blocks',
 ;
 
 
