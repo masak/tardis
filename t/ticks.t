@@ -4,18 +4,37 @@ use Test;
 plan *;
 
 use Tardis;
-use Yapsi;
 
 my @programs-ticks =
-    '',                                 1,    'empty program',
-    'my $a',                            1,    'uninitialised variable',
-    'my $a = 42',                       2,    'initalised variable',
-    'my $a = 42; ++$a',                 3,    'pre-increment',
-    'my $a = 42; my $b; { $b = 5 }',    4,    'immediate blocks',
-    'my $a = 42; { my $b = 5 }',        4,    'variable initialisation in immediate blocks',
-    '{}; my $a = 42; { my $b = 5 };',   5,    'multiple immediate blocks',
-;
+   '',
+    "",
+    'empty program',
 
+   'my $a',
+    "\$a = Any()",
+    'uninitialised variable',
+
+   'my $a = 42',
+    "\$a = Any()\t\$a = 42",
+    'initalised variable',
+
+   'my $a = 42; ++$a',
+    "\$a = Any()\t\$a = 42\t\$a = 43",
+    'pre-increment',
+
+   'my $a = 42; my $b; { $b = 5 }',
+    "\$a = Any()\n\$b = Any()\t\$a = 42\n\$b = Any()\t\$a = 42\n\$b = Any()\t\$a = 42\n\$b = 5",
+    'immediate blocks',
+
+   'my $a = 42; { my $b = 5 }',
+    "\$a = Any()\t\$a = 42\t\$b = Any()\n\$a = 42\t\$b = 5\n\$a = 42",
+    'variable initialisation in immediate blocks',
+
+   '{}; my $a = 42; { my $b = 5 };',
+    "\$a = Any()\t\$a = Any()\t\$a = 42\t\$b = Any()\n\$a = 42\t\$b = 5\n\$a = 42",
+    'multiple immediate blocks',
+
+;
 
 for @programs-ticks -> $program, $ticks, $message {
     my Yapsi::Compiler  $c .= new;
@@ -24,7 +43,8 @@ for @programs-ticks -> $program, $ticks, $message {
     my @sic = $c.compile($program);
     $d.run(@sic);
 
-    is +$d.ticks, $ticks, $message;
+    my $result = $d.ticks.map({.fmt("%s = %s")}).join("\t");
+    is $result , $ticks, $message;
 }
 
 done_testing;
