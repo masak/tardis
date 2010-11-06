@@ -14,37 +14,47 @@ else {
     die "Usage: `$*PROGRAM_NAME <file>` or `$*PROGRAM_NAME -e '<program>'`";
 }
 
-my Yapsi::Compiler $c .= new;
-my Tardis::Debugger $d .= new;
+my $origprogram = $program; # in case we need the original copy later
 
-try {
-    say "# Compiling...";
-    my @sic = $c.compile($program);
-    warn $_ for $c.warnings;
+my @ticks;
+run-program();
 
-    say "# Running...";
-    $d.run(@sic);
-}
-say $! if $!;
-
-my @ticks = $d.ticks;
-unless @ticks {
-    say "No ticks registered. Quitting.";
-    exit;
+sub run-program() {
+    my Yapsi::Compiler $c .= new;
+    my Tardis::Debugger $d .= new;
+    try {
+        say "# Compiling...";
+        my @sic = $c.compile($program);
+        warn $_ for $c.warnings;
+        
+        say "# Running...";
+        $d.run(@sic);
+    }
+    say $! if $!;
+    
+    @ticks = $d.ticks;
+    unless @ticks {
+        say "No ticks registered. Quitting.";
+        exit;
+    }
 }
 
 my $current-tick = 0;
 say "# Finished. Ticks: 0..", @ticks.end;
 
-while defined(my $cmd = prompt '> ') {
+while defined(my $cmd = prompt "TICK $current-tick/{@ticks.end}> ") {
     given $cmd {
         when /^ \s* $/       { }
         when 'look'          { look() }
-        when 'step'          { step() } 
+        when 'step'          { step() }
         when 'n'             { step() }
         when /^go\s+(\d+)$/  { go(+$0) }
+        when /^rewrite\s+(.+)$/ { rewrite(~$0) }
+        when 'help'          { help() }
         when 'quit'          { quit() }
         when 'q'             { quit() }
+        when 'exit'          { quit() }
+        when 'debug'         { debug() }
 
         default              { say  "Sorry, unrecognized command." }
     }
@@ -75,7 +85,37 @@ multi sub go(Num $tick) {
     look();
 }
 
+sub rewrite(Str $line is copy) {
+    if $line.split('')[*-1] == ';' {
+        $line.chop;
+    }
+    if $current-tick == 0 {
+        say 'You cannot rewrite tick 0; this is the "before execution" tick.';
+    }
+    my @proglines = $program.split(';');
+    @proglines[$current-tick - 1] = $line;
+    $program = @proglines.join(';');
+    say "Rewrite of time successful. Realigning the rest of the program..."; 
+    run-program();
+    say "No paradoxes occurred. You may continue."
+}
+
+sub help() {
+    say "Tardis debugging commands:
+look    View the state of all variables in the program.
+step    Goes to the next tick in the program, then `look's.
+go N    Goes to tick N in the program, then  `look's.
+help    Display this help message.
+quit
+exit
+q       exit Tardis.";
+}
+
 sub quit() {
     exit;
 }
 
+sub debug() {
+    say $program.perl;
+    say @ticks.perl;
+}
