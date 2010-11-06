@@ -35,6 +35,7 @@ sub run-program() {
     @ticks = $d.ticks;
     unless @ticks {
         say "No ticks registered. Quitting.";
+        debug();
         exit;
     }
 }
@@ -44,19 +45,19 @@ say "# Finished. Ticks: 0..", @ticks.end;
 
 while defined(my $cmd = prompt "TICK $current-tick/{@ticks.end}> ") {
     given $cmd {
-        when /^ \s* $/       { }
+        when /^ \s* $/     { }
         when 'look'          { look() }
         when 'step'          { step() }
         when 'n'             { step() }
-        when /^go\s+(\d+)$/  { go(+$0) }
-        when /^rewrite\s+(.+)$/ { rewrite(~$0) }
-        when 'help'          { help() }
+        when /^ go \s+ (\d+) $/  { go(+$0) }
+        when /^ rewrite \s+ (.+) $/ { rewrite(~$0) }
+        when /^ help [\s+ (\N+)]? $/ { help(~$0) }
         when 'quit'          { quit() }
         when 'q'             { quit() }
         when 'exit'          { quit() }
         when 'debug'         { debug() }
 
-        default              { say  "Sorry, unrecognized command." }
+        default              { say  "Sorry, unrecognized command. (type `help')" }
     }
 }
 
@@ -97,18 +98,33 @@ sub rewrite(Str $line is copy) {
     $program = @proglines.join(';');
     say "Rewrite of time successful. Realigning the rest of the program..."; 
     run-program();
-    say "No paradoxes occurred. You may continue."
+    say "No paradoxes occurred. You may continue.";
 }
 
-sub help() {
-    say "Tardis debugging commands:
+sub help($topic) {
+    given $topic {
+        when "look" { say "syntax: look
+    when this command is executed, Tardis will look at all the variables in your program at that particular tick and show you their values. Many other commands in Tardis will run `look' at some point."; }
+        when "step" { say "syntax: step
+    This command will go to the next tick in the program. Afterwards, `look' will be run so you can see what happens at this moment in time. If you reached the end of the timeline, the command will stop and let you continue using Tardis. This command is equivalent to go 1."; }
+        when "go" { say "syntax: go N    where N is a number.
+    `go' will jump to a specific tick in the timeline. If the point you wish to jump to is beyond the range of the timeline, the command will quit running (for the program you put in Tardis, this range is 0..{@ticks.end}). Tardis will still be running however. After jumping to that specific tick in the timeline, the command will `look'."; }
+        when "rewrite" { say "syntax: rewrite STRING
+    The `rewrite' command will rewrite the current tick with STRING. Afterwards, the program will be recompiled and rerun. Invalid P6 code will stop Tardis from running."; }
+        when "help" { say "syntax: help [COMMAND]
+    This displays help information for COMMAND. If no COMMAND is specified, a list of all the available commands and a brief list of what each command does."; }
+        #XXX add quit/exit/q help, although the need for anything more complex than what the overview says is questionable.
+        default { say "Tardis debugging commands:
 look    View the state of all variables in the program.
 step    Goes to the next tick in the program, then `look's.
 go N    Goes to tick N in the program, then  `look's.
+rewrite Rewrites the current tick, then updates the rest of the program.
 help    Display this help message.
 quit
 exit
-q       exit Tardis.";
+q       exit Tardis.
+  for more details on various commands, type help [command]";}
+    }
 }
 
 sub quit() {
@@ -116,6 +132,7 @@ sub quit() {
 }
 
 sub debug() {
-    say $program.perl;
-    say @ticks.perl;
+    say "Tardis DEBUG INFO (for Tardis devs):
+{$program.perl}
+{@ticks.perl}";
 }
