@@ -88,7 +88,7 @@ multi sub go(Num $tick) {
 
 sub rewrite(Str $line is copy) {
     if $line.split('')[*-1] == ';' {
-        $line.chop;
+        $line .= chop;
     }
     if $current-tick == 0 {
         say 'You cannot rewrite tick 0; this is the "before execution" tick.';
