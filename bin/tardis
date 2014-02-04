@@ -14,39 +14,53 @@ else {
     die "Usage: `$*PROGRAM_NAME <file>` or `$*PROGRAM_NAME -e '<program>'`";
 }
 
-my Yapsi::Compiler $c .= new;
-my Tardis::Debugger $d .= new;
+my $origprog = $program; # in case we need the original copy later
 
-try {
-    say "# Compiling...";
-    my @sic = $c.compile($program);
-    warn $_ for $c.warnings;
+my @ticks;
+run-program();
 
-    say "# Running...";
-    $d.run(@sic);
-}
-say $! if $!;
-
-my @ticks = $d.ticks;
-unless @ticks {
-    say "No ticks registered. Quitting.";
-    exit;
+sub run-program() {
+    my Yapsi::Compiler $c .= new;
+    my Tardis::Debugger $d .= new;
+    try {
+        say "# Compiling...";
+        my @sic = $c.compile($program);
+        warn $_ for $c.warnings;
+        
+        say "# Running...";
+        $d.run(@sic);
+    }
+    say $! if $!;
+    
+    @ticks = $d.ticks;
+    unless @ticks {
+        say "No ticks registered. Quitting.";
+        debug();
+        exit;
+    }
 }
 
 my $current-tick = 0;
 say "# Finished. Ticks: 0..", @ticks.end;
 
-while defined(my $cmd = prompt '> ') {
+while defined(my $cmd = prompt "TICK $current-tick/{@ticks.end}> ") {
     given $cmd {
-        when /^ \s* $/       { }
+        when /^ \s* $/     { }
         when 'look'          { look() }
-        when 'step'          { step() } 
+        when 'step'          { step() }
         when 'n'             { step() }
-        when /^go\s+(\d+)$/  { go(+$0) }
+        when 'pets'          { pets() }
+        when 'p'             { pets() }
+        when /^ go \s+ (\d+) $/  { go(+$0) }
+        when /^ rewrite \s+ (.+) $/ { rewrite(~$0) }
+        when 'unwrite'       { unwrite() }
+        when /^ help [\s+ (\N+)]? $/ { help(~$0) }
         when 'quit'          { quit() }
         when 'q'             { quit() }
+        when 'exit'          { quit() }
+        when 'debug'         { debug() }
 
-        default              { say  "Sorry, unrecognized command." }
+        default              { say  "Sorry, unrecognized command. (type `help')" }
     }
 }
 
@@ -66,6 +80,15 @@ sub step() {
     look();
 }
 
+sub pets() {
+    if $current-tick == 0 {
+        say 'Can not go beyond the zeroth tick.';
+        return;
+    }
+    --$current-tick;
+    look();
+}
+
 # RAKUDO: Should really be typed 'Int'.
 multi sub go(Num $tick where { $tick > @ticks.end }) {
     say 'Can not go beyond last tick.';
@@ -75,7 +98,74 @@ multi sub go(Num $tick) {
     look();
 }
 
+sub rewrite(Str $line is copy) {
+    if $line.split('')[*-1] == ';' {
+        $line .= chop;
+    }
+    if $current-tick == 0 {
+        say 'You cannot rewrite tick 0; this is the "before execution" tick.';
+        return;
+    }
+    my @proglines = $program.split(';');
+    @proglines[$current-tick - 1] = $line;
+    $program = @proglines.join(';');
+    say "Rewrite of time successful. Realigning the rest of the program..."; 
+    run-program();
+    say "No paradoxes occurred. You may continue.";
+}
+
+sub unwrite() {
+    if $current-tick == 0 {
+        say 'You cannot unwrite tick 0. [Changing tick 0 is quite an accomplishment if you managed it, by the way.]';
+        return;
+    }
+    my @proglines = $program.split(';');
+    my @oldprog   = $origprog.split(';');
+    @proglines[$current-tick - 1] = @oldprog[$current-tick - 1];
+    $program = @proglines.join(';');
+    say "Unwrite of tick $current-tick successful. Rewriting time...";
+    run-program();
+    say "Time seems to be alright. You may continue.";
+}
+
+sub help($topic) {
+    given $topic {
+        when "look" { say "syntax: look
+    when this command is executed, Tardis will look at all the variables in your program at that particular tick and show you their values. Many other commands in Tardis will run `look' at some point."; }
+        when "step" { say "syntax: step
+    This command will go to the next tick in the program. Afterwards, `look' will be run so you can see what happens at this moment in time. If you reached the end of the timeline, the command will stop and let you continue using Tardis. This command is equivalent to go 1."; }
+        when "pets" { say "syntax: pets
+    This command does the opposite of step (hence 'pets'), and goes one back. After doing so, it will `look'."; }
+        when "go" { say "syntax: go N    where N is a number.
+    `go' will jump to a specific tick in the timeline. If the point you wish to jump to is beyond the range of the timeline, the command will quit running (for the program you put in Tardis, this range is 0..{@ticks.end}). Tardis will still be running however. After jumping to that specific tick in the timeline, the command will `look'."; }
+        when "rewrite" { say "syntax: rewrite STRING
+    The `rewrite' command will rewrite the current tick with STRING. Afterwards, the program will be recompiled and rerun. Invalid P6 code will stop Tardis from running."; }
+        when "unwrite" { say "syntax: unwrite
+    The `unwrite' command will revert the current tick to what it was in its original form."; }
+        when "help" { say "syntax: help [COMMAND]
+    This displays help information for COMMAND. If no COMMAND is specified, a list of all the available commands and a brief list of what each command does."; }
+        when "quit" { say "syntax: quit
+    This command will stop Tardis and return you to your shell."; }
+        default { say "Tardis debugging commands:
+look    View the state of all variables in the program.
+step    Goes to the next tick in the program, then `look's.
+go N    Goes to tick N in the program, then  `look's.
+rewrite Rewrites the current tick, then updates the rest of the program.
+help    Display this help message.
+quit
+exit
+q       exit Tardis.
+  for more details on various commands, type help [command]";}
+    }
+}
+
 sub quit() {
     exit;
 }
 
+sub debug() {
+    say "Tardis DEBUG INFO (for Tardis devs):
+Current program input: {$program.perl}
+           (original): {$origprog.perl}
+                Ticks: {@ticks.perl}";
+}
