@@ -3,6 +3,9 @@
     "version"     : "*",
     "description" : "Time traveling debugger in Perl 6",
     "depends"     : ["Yapsi"],
+    "provides"    : {
+       "Tardis" : "lib/Tardis.pm"
+    },
     "repo-type"   : "git",
     "repo-url"    : "git://github.com/masak/tardis.git"
 }
